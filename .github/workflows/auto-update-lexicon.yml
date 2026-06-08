@@ -34,7 +34,7 @@ jobs:
       - name: Generate variants (local rules)
         run: node scripts/generate-words-v2.js
 
-      - name: Review
+      - name: AI Review
         run: node scripts/ai-review.js
 
       - name: Build index
@@ -50,8 +50,10 @@ jobs:
         run: |
           if git diff --quiet; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes to commit"
           else
             echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "Changes found:"
             git diff --stat
           fi
 
@@ -63,6 +65,7 @@ jobs:
           git add .
           git commit -m "feat: auto update lexicon $(date +%Y.%m.%d)"
           git push
+        continue-on-error: true
 
       - name: Create Release
         if: steps.changes.outputs.has_changes == 'true'
