@@ -28,10 +28,10 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install
+      - name: Install dependencies
         run: npm install
 
-      - name: Generate variants (local rules)
+      - name: Generate variants
         run: node scripts/generate-words-v2.js
 
       - name: AI Review
@@ -43,7 +43,10 @@ jobs:
       - name: Create report
         run: |
           mkdir -p reports
-          node scripts/create-report.js > "reports/update-report-$(date +%Y%m%d).md"
+          REPORT_DATE=$(date +%Y%m%d)
+          node scripts/create-report.js > "reports/update-report-${REPORT_DATE}.md"
+          echo "REPORT_DATE=${REPORT_DATE}" >> $GITHUB_ENV
+          echo "TAG_NAME=v$(date +%Y.%m.%d)" >> $GITHUB_ENV
 
       - name: Check changes
         id: changes
@@ -60,8 +63,8 @@ jobs:
       - name: Commit and push
         if: steps.changes.outputs.has_changes == 'true'
         run: |
-          git config user.name "AI Bot"
-          git config user.email "ai-bot@example.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
           git commit -m "feat: auto update lexicon $(date +%Y.%m.%d)"
           git push
@@ -71,7 +74,10 @@ jobs:
         if: steps.changes.outputs.has_changes == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: "v$(date +%Y.%m.%d)"
-          body_path: "reports/update-report-$(date +%Y%m%d).md"
+          tag_name: ${{ env.TAG_NAME }}
+          name: "Lexicon Update ${{ env.REPORT_DATE }}"
+          body_path: "reports/update-report-${{ env.REPORT_DATE }}.md"
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
