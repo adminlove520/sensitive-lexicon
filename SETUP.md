@@ -7,8 +7,13 @@
 ### MINIMAX_API_KEY
 
 - **名称**: `MINIMAX_API_KEY`
-- **值**: `sk-cp-creCdxyA4u40aES62D-szlkGvZKhQwwvxOrJiZXGt8yYm91oOknyqPRE9RGS4iZilzlPL4lsYfkCXeY2CWj5ZMzaShHaInWJry0x1X1GvmqLI7pPN24t8lM`
+- **值**: `sk-cp-...` （你的 MiniMax M2.7 API Key）
 - **说明**: MiniMax M2.7 API 密钥
+
+⚠️ **重要安全提示**: 
+- 永远不要在代码、文档或公开仓库中明文写入 API Key！
+- API Key 应该只存储在 GitHub Secrets 中
+- 如果不慎泄露，请立即在 MiniMax 控制台重新生成
 
 ---
 

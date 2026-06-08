@@ -50,8 +50,10 @@ cd Sensitive-lexicon
 在仓库 **Settings → Secrets and variables → Actions** 中添加：
 
 ```
-MINIMAX_API_KEY: sk-cp-creCdxyA4u40aES62D-szlkGvZKhQwwvxOrJiZXGt8yYm91oOknyqPRE9RGS4iZilzlPL4lsYfkCXeY2CWj5ZMzaShHaInWJry0x1X1GvmqLI7pPN24t8lM
+MINIMAX_API_KEY: sk-cp-... （你的 MiniMax M2.7 API Key）
 ```
+
+⚠️ **重要安全提示**: 永远不要在代码、文档或公开仓库中明文写入 API Key！
 
 详细配置步骤见 [SETUP.md](SETUP.md)
 
