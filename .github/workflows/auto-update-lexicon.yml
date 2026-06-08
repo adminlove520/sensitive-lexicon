@@ -11,17 +11,15 @@ concurrency:
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   auto-update:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -30,43 +28,32 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: Install
         run: npm install
 
-      - name: Generate new words
-        run: node scripts/generate-words.js
-        env:
-          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-        timeout-minutes: 10
+      - name: Generate variants (local rules)
+        run: node scripts/generate-words-v2.js
 
-      - name: AI Review
+      - name: Review
         run: node scripts/ai-review.js
-        env:
-          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
-        timeout-minutes: 15
 
       - name: Build index
         run: node scripts/build-index.js
 
-      - name: Create Report
+      - name: Create report
         run: |
           mkdir -p reports
           node scripts/create-report.js > "reports/update-report-$(date +%Y%m%d).md"
 
-      - name: Check for changes
+      - name: Check changes
         id: changes
         run: |
-          CHANGES=$(git status --porcelain)
-          if [ -z "$CHANGES" ]; then
+          if git diff --quiet; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "No changes to commit"
-            exit 0
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            git diff --stat
           fi
-          echo "has_changes=true" >> $GITHUB_OUTPUT
-          echo "Changes detected:"
-          echo "$CHANGES"
 
       - name: Commit and push
         if: steps.changes.outputs.has_changes == 'true'
@@ -76,16 +63,12 @@ jobs:
           git add .
           git commit -m "feat: auto update lexicon $(date +%Y.%m.%d)"
           git push
-        continue-on-error: true
 
       - name: Create Release
         if: steps.changes.outputs.has_changes == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "v$(date +%Y.%m.%d)"
-          name: "Lexicon Update $(date +%Y.%m.%d)"
           body_path: "reports/update-report-$(date +%Y%m%d).md"
-          draft: false
-          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
