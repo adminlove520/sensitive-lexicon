@@ -1,0 +1,28 @@
+# 常用词库（用于防误伤）
+
+## 中文常用词（100个）
+
+的 一 了 是 在 我 有 就 不 人 他 这
+着 个 地 来 你 上 么 也 去 说 会 能
+她 好 看 那 里 都是 和 我们 大 还是 但是
+可以 这么 要 只 没有 多么 过 已经 因为
+什么 还 很 给 自己 就 当 让 把 它 还是
+被 到 觉 得 要 知道 先 想 怎么 就 只有
+就 都 这样 像 没有 和 还是 就 要 有 没有
+
+## 英文常用词（100个）
+
+the and for are but not you all can had
+her was one our out has been there will use
+what with they this have each from need which
+their would about if get my time more some
+when just very into make than like know how
+should such your did could them then said two
+its who other after work new any first do
+good great last long also much want even well
+never those both often take many like still only
+come year also people think say see go make
+
+---
+
+**说明**：这些词会被用于检测误伤，如果生成的敏感词与这些词相似度过高，会被拒绝。

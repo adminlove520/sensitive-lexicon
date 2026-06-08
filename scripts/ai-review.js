@@ -139,8 +139,14 @@ async function main() {
   
   console.log(`找到 ${files.length} 个待审核文件`);
   
-  // 常用词库（简化版）
-  const commonWords = ['的', '了', '和', '是', '在', '我', '有', '就', '不', '人'];
+  // 读取常用词库
+  const commonWordsPath = path.join(__dirname, 'common-words.txt');
+  let commonWords = ['的', '了', '和', '是', '在', '我', '有', '就', '不', '人'];
+  
+  if (fs.existsSync(commonWordsPath)) {
+    const content = fs.readFileSync(commonWordsPath, 'utf-8');
+    commonWords = content.split('\n').filter(line => line.trim() && !line.startsWith('#'));
+  }
   
   const stats = {
     total: 0,

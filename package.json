@@ -1,0 +1,29 @@
+{
+  "name": "sensitive-lexicon",
+  "version": "1.0.0",
+  "description": "敏感词库自动更新系统 - 基于 AI 的自动生成、审核、索引构建",
+  "main": "scripts/build-index.js",
+  "scripts": {
+    "generate": "node scripts/generate-words.js",
+    "review": "node scripts/ai-review.js",
+    "build": "node scripts/build-index.js",
+    "report": "node scripts/create-report.js",
+    "update": "npm run generate && npm run review && npm run build && npm run report"
+  },
+  "keywords": [
+    "sensitive",
+    "lexicon",
+    "ai",
+    "minimax",
+    "content-moderation"
+  ],
+  "author": "GitHub",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
