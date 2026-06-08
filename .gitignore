@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.generated/
+.approved/
+reports/
+*.log
+.env
+.DS_Store
