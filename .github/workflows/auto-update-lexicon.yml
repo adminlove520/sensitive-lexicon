@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          token: *** secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -28,13 +28,13 @@ jobs:
         run: |
           node scripts/generate-words.js
         env:
-          MINIMAX_API_KEY: *** secrets.MINIMAX_API_KEY }}
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
       
       - name: AI Review
         run: |
           node scripts/ai-review.js
         env:
-          MINIMAX_API_KEY: *** secrets.MINIMAX_API_KEY }}
+          MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
       
       - name: Build index
         run: |
@@ -61,4 +61,4 @@ jobs:
           draft: false
           prerelease: false
         env:
-          GITHUB_TOKEN: *** secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
