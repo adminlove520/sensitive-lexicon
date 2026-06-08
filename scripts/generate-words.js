@@ -1,172 +1,104 @@
 /**
- * AI 生成新词脚本
- * 
- * 功能：
- * 1. 读取现有词库
- * 2. 调用 MiniMax M2.7 API 生成变体
- * 3. 输出到待审核文件
+ * AI 生成新词脚本 v2.0
+ *
+ * 改进：
+ * 1. 增强本地规则生成（API 被拒时自动降级）
+ * 2. 支持多种 AI API（MiniMax/DeepSeek/OpenAI）
+ * 3. 更好的错误处理
  */
 
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 
-// 配置
-const CATEGORIES = {
-  HIGH_RISK: ['政治类型', '暴恐词库', '涉枪涉爆', '反动词库'],
-  MEDIUM_RISK: ['广告类型', '民生词库', 'GFW补充词库'],
-  LOW_RISK: ['COVID-19词库', '网易前端过滤敏感词库']
+const CONFIG = {
+  CATEGORIES: {
+    HIGH_RISK: ['政治类型', '暴恐词库', '涉枪涉爆', '反动词库'],
+    MEDIUM_RISK: ['广告类型', '民生词库', 'GFW补充词库'],
+    LOW_RISK: ['COVID-19词库', '网易前端过滤敏感词库']
+  },
+  VOCABULARY_DIR: path.join(__dirname, '../Vocabulary'),
+  OUTPUT_DIR: path.join(__dirname, '../.generated'),
+  VARIANTS_PER_CATEGORY: 30,
+  API_PROVIDERS: [
+    { name: 'MiniMax', baseUrl: 'https://api.minimax.chat/v1', model: 'abab6.5s-chat', enabled: () => !!process.env.MINIMAX_API_KEY },
+    { name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat', enabled: () => !!process.env.DEEPSEEK_API_KEY },
+    { name: 'OpenAI', baseUrl: 'https://api.openai.com/v1', model: 'gpt-3.5-turbo', enabled: () => !!process.env.OPENAI_API_KEY }
+  ]
 };
 
-const VOCABULARY_DIR = path.join(__dirname, '../Vocabulary');
-const OUTPUT_DIR = path.join(__dirname, '../.generated');
-
-/**
- * 读取词库文件
- */
 function readLexicon(category) {
-  const filePath = path.join(VOCABULARY_DIR, `${category}.txt`);
-  if (!fs.existsSync(filePath)) {
-    console.log(`文件不存在: ${filePath}`);
-    return [];
-  }
-  
-  const content = fs.readFileSync(filePath, 'utf-8');
-  return content.split('\n').filter(line => line.trim());
+  const filePath = path.join(CONFIG.VOCABULARY_DIR, category + '.txt');
+  if (!fs.existsSync(filePath)) { console.log('  File not found'); return []; }
+  return fs.readFileSync(filePath, 'utf-8').split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
 }
 
-/**
- * 调用 MiniMax M2.7 API 生成变体
- */
-async function generateVariants(words, category) {
-  console.log(`为 ${category} 生成变体...`);
-  
-  const apiKey = process.env.MINIMAX_API_KEY;
-  if (!apiKey) {
-    throw new Error('MINIMAX_API_KEY not set');
+function getEnabledProvider() {
+  for (const p of CONFIG.API_PROVIDERS) { if (p.enabled()) return p; }
+  return null;
+}
+
+function getApiKey(p) { return p.name === 'MiniMax' ? process.env.MINIMAX_API_KEY : p.name === 'DeepSeek' ? process.env.DEEPSEEK_API_KEY : process.env.OPENAI_API_KEY; }
+
+function generateRuleBasedVariants(word) {
+  const variants = new Set();
+  const pinyinMap = { '中': 'zhong', '共': 'gong', '党': 'dang', '国': 'guo', '领': 'ling', '导': 'dao', '北': 'bei', '京': 'jing', '人': 'ren' };
+  if (pinyinMap[word[0]]) { const py = pinyinMap[word[0]]; variants.add(py); variants.add(py[0].toUpperCase() + py.slice(1)); variants.add(py.toUpperCase()); }
+  if (word.length >= 2) {
+    const chars = word.split('');
+    variants.add(chars.join(' ')); variants.add(chars.join('*')); variants.add(chars.join('-'));
+    variants.add(word[0] + '*'.repeat(word.length - 1));
+    const similar = { '党': '挡', '共': '供', '国': '裹', '导': '道' };
+    for (const [o, s] of Object.entries(similar)) { if (word.includes(o)) variants.add(word.replace(o, s)); }
   }
-  
-  // 取前 20 个词作为示例（避免 token 超限）
-  const sampleWords = words.slice(0, 20);
-  
-  const prompt = `你是一个敏感词变体生成专家。给定以下敏感词列表，请生成它们的常见变体。
+  ['*', '-', '.', '·'].forEach(sym => { if (word.length >= 2) variants.add(word.slice(0, Math.floor(word.length/2)) + sym + word.slice(Math.floor(word.length/2))); });
+  const numMap = { '一': '1', '二': '2', '三': '3', '七': '7', '八': '8' };
+  let rep = word; for (const [c, n] of Object.entries(numMap)) { rep = rep.replace(c, n); }
+  if (rep !== word) variants.add(rep);
+  if (word.length >= 2) { variants.add(word + word); variants.add(word.split('').reverse().join('')); }
+  return Array.from(variants).filter(v => v !== word && v.length >= 2 && v.length <= 20);
+}
 
-原始词：${sampleWords.join(', ')}
+function generateAllRuleVariants(words, target = 50) {
+  const all = new Set();
+  for (const w of words) { generateRuleBasedVariants(w).forEach(v => all.add(v)); if (all.size >= target) break; }
+  if (all.size < target && words.length >= 2) { for (let i = 0; i < words.length-1 && all.size < target; i++) { for (let j = i+1; j < words.length && all.size < target; j++) { all.add(words[i]+words[j][0]); all.add(words[j]+words[i][0]); } } }
+  return Array.from(all).slice(0, target);
+}
 
-生成规则：
-1. 拼音变体：如 "北京" → "beijing"
-2. 形近字：如 "习近平" → "习近评"
-3. 分散写法：如 "主席" → "主 席"
-4. 符号插入：如 "中共" → "中*共"
-5. 部分遮蔽：如 "江泽民" → "江*民"
-
-请以 JSON 数组格式输出，只包含新词，不要重复原始词。`;
-  
+async function callAIApi(words, provider) {
+  const apiKey = getApiKey(provider);
+  if (!apiKey) return null;
+  const prompt = 'You are a Chinese sensitive word expert. Generate variants for: ' + words.slice(0, 10).join(', ') + '. Output JSON array only.';
   try {
-    const response = await axios.post(
-      'https://api.minimax.chat/v1/chat/completions',
-      {
-        model: 'abab6.5-chat',  // MiniMax M2.7 对应的模型
-        messages: [{
-          role: 'user',
-          content: prompt
-        }],
-        temperature: 0.7
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-    
-    const content = response.data.choices[0].message.content;
-    
-    // 解析 JSON
-    let variants = [];
-    try {
-      variants = JSON.parse(content);
-    } catch (e) {
-      // 如果解析失败，尝试提取 JSON
-      const match = content.match(/\[.*\]/s);
-      if (match) {
-        variants = JSON.parse(match[0]);
-      }
-    }
-    
-    return [...new Set(variants)]; // 去重
-  } catch (error) {
-    console.error('AI API 调用失败:', error.message);
-    // 降级到规则生成
-    return generateRuleBasedVariants(sampleWords);
-  }
+    const resp = await axios.post(provider.baseUrl + '/chat/completions', { model: provider.model, messages: [{ role: 'user', content: prompt }], temperature: 0.7, max_tokens: 1000 }, { headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' }, timeout: 30000 });
+    const content = resp.data.choices[0].message.content;
+    try { return JSON.parse(content); } catch(e) { const m = content.match(/\[[\s\S]*\]/); if (m) try { return JSON.parse(m[0]); } catch(e2) {} }
+    return null;
+  } catch(e) { if (e.response?.data?.error?.code === 1027 || e.message?.includes('1027')) { console.log('  API blocked, using local rules'); return null; } console.log('  API error: ' + e.message); return null; }
 }
 
-/**
- * 规则生成变体（降级方案）
- */
-function generateRuleBasedVariants(words) {
-  const variants = [];
-  
-  for (let word of words) {
-    // 规则 1: 字母替换
-    if (/[a-z]/i.test(word)) {
-      variants.push(word.replace(/[a-z]/gi, '*'));
-    }
-    
-    // 规则 2: 插入符号
-    if (word.length > 2) {
-      variants.push(word.split('').join('*'));
-    }
-    
-    // 规则 3: 部分遮蔽
-    if (word.length > 3) {
-      variants.push(word.substring(0, 2) + '***');
-    }
-  }
-  
-  return [...new Set(variants)];
-}
-
-/**
- * 主函数
- */
 async function main() {
-  // 创建输出目录
-  if (!fs.existsSync(OUTPUT_DIR)) {
-    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-  }
-  
-  // 处理每个分类
-  for (const [riskLevel, categories] of Object.entries(CATEGORIES)) {
-    for (const category of categories) {
-      console.log(`\n处理分类: ${category} (${riskLevel})`);
-      
-      // 读取现有词库
-      const existingWords = readLexicon(category);
-      console.log(`现有词数: ${existingWords.length}`);
-      
-      // 生成变体
-      const newWords = await generateVariants(existingWords, category);
-      console.log(`生成新词: ${newWords.length}`);
-      
-      // 输出到待审核文件
-      const outputFile = path.join(OUTPUT_DIR, `${category}-pending.json`);
-      fs.writeFileSync(outputFile, JSON.stringify({
-        category,
-        riskLevel,
-        existingWordsCount: existingWords.length,
-        newWords,
-        timestamp: new Date().toISOString()
-      }, null, 2));
-      
-      console.log(`已输出到: ${outputFile}`);
+  console.log('Generating variants...\n');
+  if (!fs.existsSync(CONFIG.OUTPUT_DIR)) fs.mkdirSync(CONFIG.OUTPUT_DIR, { recursive: true });
+  const provider = getEnabledProvider();
+  console.log(provider ? 'Using API: ' + provider.name : 'No API configured, using local rules');
+  for (const [level, cats] of Object.entries(CONFIG.CATEGORIES)) {
+    console.log('\n' + '='.repeat(40) + '\n' + level + '\n' + '='.repeat(40));
+    for (const cat of cats) {
+      console.log('\nProcessing: ' + cat);
+      const words = readLexicon(cat);
+      if (words.length === 0) { console.log('  Skipped (no words)'); continue; }
+      console.log('  Existing: ' + words.length);
+      let newWords = [];
+      if (provider) { newWords = await callAIApi(words, provider); if (!newWords?.length) { console.log('  Using local rules'); newWords = generateAllRuleVariants(words, CONFIG.VARIANTS_PER_CATEGORY); } }
+      else { newWords = generateAllRuleVariants(words, CONFIG.VARIANTS_PER_CATEGORY); }
+      console.log('  Generated: ' + newWords.length);
+      fs.writeFileSync(path.join(CONFIG.OUTPUT_DIR, cat + '-pending.json'), JSON.stringify({ category: cat, riskLevel: level, existingWordsCount: words.length, newWords, timestamp: new Date().toISOString() }, null, 2));
+      console.log('  Saved');
     }
   }
-  
-  console.log('\n✅ 生成完成！');
+  console.log('\nDone!');
 }
 
-// 运行
 main().catch(console.error);
