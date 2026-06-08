@@ -72,7 +72,7 @@ async function aiReview(word, category) {
     const response = await axios.post(
       'https://api.minimax.chat/v1/chat/completions',
       {
-        model: 'abab6.5s-chat',
+        model: 'abab6.5-chat',  // MiniMax M2.7 对应的模型
         messages: [{
           role: 'user',
           content: prompt
@@ -81,7 +81,7 @@ async function aiReview(word, category) {
       },
       {
         headers: {
-          'Authorization': `Bearer *** apiKey}`,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json'
         }
       }
