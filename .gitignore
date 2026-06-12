@@ -18,3 +18,8 @@ node_modules/
 # 临时文件
 *.tmp
 *.temp
+
+# Vercel 和 API 构建
+.vercel/
+.api/
+*.tsbuildinfo

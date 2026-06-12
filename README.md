@@ -11,6 +11,7 @@
 - ✅ **三级分类**：高/中/低风险词库分级管理
 - ✅ **高效索引**：按长度分组，支持快速匹配
 - ✅ **自动化 Release**：每次更新自动发布新版本
+- ✅ **文本审核 API**：基于 Vercel Edge Functions 的高性能 API
 
 ---
 
@@ -129,6 +130,32 @@ Sensitive-lexicon/
 ```
 v2026.06.08 - 系统初始化
 ```
+
+---
+
+## 🌐 文本审核 API
+
+系统提供基于 Vercel Edge Functions 的文本审核 API：
+
+```bash
+# 健康检查
+curl https://your-project.vercel.app/api/health
+
+# 文本审核
+curl -X POST https://your-project.vercel.app/api/moderate/text \
+  -H "Content-Type: application/json" \
+  -d '{"text":"待审核文本"}'
+```
+
+**API 特性：**
+- 🌍 全球边缘部署，低延迟
+- ⚡ 高效匹配算法
+- 💾 结果缓存
+- 📊 风险等级评估
+
+详细文档见 [README-API.md](README-API.md)
+
+**部署指南：** [DEPLOY.md](DEPLOY.md)
 
 ---
 

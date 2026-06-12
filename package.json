@@ -7,14 +7,32 @@
     "generate": "node scripts/generate-words.js",
     "review": "node scripts/ai-review.js",
     "build": "node scripts/build-index.js",
+    "build:api": "node scripts/build-api.js && tsc --noEmit",
+    "build:all": "npm run build && npm run build:api",
     "report": "node scripts/create-report.js",
-    "update": "npm run generate && npm run review && npm run build && npm run report"
+    "update": "npm run generate && npm run review && npm run build && npm run report",
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
   },
-  "keywords": ["sensitive", "lexicon", "ai", "minimax", "deepseek", "content-moderation"],
+  "keywords": [
+    "sensitive",
+    "lexicon",
+    "ai",
+    "minimax",
+    "deepseek",
+    "content-moderation",
+    "text-moderation",
+    "api"
+  ],
   "author": "GitHub",
   "license": "MIT",
   "dependencies": {
     "axios": "^1.7.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20231218.0",
+    "typescript": "^5.3.0",
+    "vercel": "^33.0.0"
   },
   "engines": {
     "node": ">=18.0.0"

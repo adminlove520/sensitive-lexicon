@@ -1,0 +1,32 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build:all",
+  "outputDirectory": "dist",
+  "framework": null,
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "edge",
+      "maxDuration": 10
+    }
+  },
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/moderate/text",
+      "destination": "/api/moderate/text.ts"
+    },
+    {
+      "source": "/api/moderate/batch",
+      "destination": "/api/moderate/batch.ts"
+    },
+    {
+      "source": "/api/health",
+      "destination": "/api/health.ts"
+    }
+  ]
+}
